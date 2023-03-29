@@ -1,15 +1,15 @@
-import math
+import heapq
 import os
-from queue import PriorityQueue
 import random
 dir_path = os.path.dirname(os.path.realpath(__file__))
-W = 4  # number of nodes taken after a turn of generation
-runs = 50
-recursiveCalls = 2
-recursiveCount = 0
+
+W = 5  # number of nodes taken after a turn of generation
+runs = 200
 exploredSet = dict()
 maxVal = 0
 resState = []
+recursiveCount = 0
+recursiveCalls = 10
 
 class Knapsack:
     def __init__(self) -> None:
@@ -33,21 +33,7 @@ class Knapsack:
         weights = [float(i) for i in lines[2].split(',')]
         values = [int(i) for i in lines[3].split(',')]
         labels = [int(i) for i in lines[4].split(',')]
-        # Sort the input
-        for i in range(len(weights)):
-            for j in range(i + 1, len(weights)):
-                if values[i] / weights[i] < values[j] / weights[j]:
-                    temp = values[i]
-                    values[i] = values[j]
-                    values[j] = temp
 
-                    temp = weights[i]
-                    weights[i] = weights[j]
-                    weights[j] = temp
-
-                    temp = labels[i]
-                    labels[i] = labels[j]
-                    labels[j] = temp
         return {
             "capacity": capacity,
             "num_of_classes": num_of_classes,
@@ -91,7 +77,8 @@ class BeamSearch:
 
     def run(self, problem: Knapsack):
         self.genInitState(problem)
-        q = PriorityQueue()
+        q = []
+        heapq.heapify(q)
         n = 0
         global maxVal
         global resState
@@ -105,37 +92,40 @@ class BeamSearch:
             recursiveCount += 1
 
         for state in self.listState:
-            print(self.fitness(problem, state), state)
-            q.put((self.fitness(problem, state), state))
+            heapq.heappush(q, (self.fitness(problem, state), state))
             exploredSet[str(state)] = True
             if maxVal < -self.fitness(problem, state):
                 maxVal = -self.fitness(problem, state)
                 resState = state.copy()
 
-        while n < runs and not q.empty():
+        while n < runs and not len(q) == 0:
             initStates = []
             for i in range(W):
-                fit,state = q.get()
+                if len(q) == 0:
+                    self.run(problem)
+                else:
+                    fit,state = heapq.heappop(q)
                 initStates.append((fit,state))
-            q = PriorityQueue()
+
+            while not len(q) == 0:
+                heapq.heappop(q)
 
             for item in initStates:
-                fit,state = item
+                fit = item[0]
+                state=item[1]
                 successors = self.genSuccessors(problem, state)
                 for sc in successors:
-                    if str(sc) not in exploredSet:
-                        f = self.fitness(problem,sc)
+                    f = self.fitness(problem, sc)
+                    if str(sc) not in exploredSet and f <= fit:
                         if maxVal < -f:
                             maxVal = -f
                             resState = sc.copy()
                         exploredSet[str(sc)]=True
-                        if f <= fit:
-                            q.put((f,sc))
+                        heapq.heappush(q,(f, sc))
 
             n += 1
-        self.run(problem)
+        return maxVal, resState
 
-if __name__ == "__main__":
-    problem = Knapsack()
-    search = BeamSearch()
-    print(search.run(problem))
+problem = Knapsack()
+search = BeamSearch()
+print(search.run(problem))
