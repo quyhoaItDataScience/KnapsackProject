@@ -1,5 +1,4 @@
 import os 
-dir_path = os.path.dirname(os.path.realpath(__file__))
 class Knapsack: 
     def __init__(self) -> None:
         self.capacity = self.input()["capacity"]
